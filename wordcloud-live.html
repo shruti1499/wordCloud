@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WordCloud Live</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07070f;
+  --surface:#0f0f1a;
+  --surface2:#16162a;
+  --border:#252540;
+  --border2:#353560;
+  --accent:#7b68ee;
+  --accent2:#e879a0;
+  --text:#eeeeff;
+  --muted:#7070a0;
+  --muted2:#9090b8;
+  --success:#4ade80;
+  --r:10px;
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* ── UTILITIES ── */
+.screen{display:none;min-height:100vh;flex-direction:column}
+.screen.active{display:flex}
+.btn{padding:11px 22px;border-radius:8px;font-size:.9rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;display:inline-flex;align-items:center;gap:7px}
+.btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-ghost{background:transparent;color:var(--muted2);border:1px solid var(--border2)}
+.btn-ghost:hover{color:var(--text);border-color:var(--accent)}
+.btn-danger{background:#1a0f0f;color:#f87171;border:1px solid #3d1a1a}
+.btn-danger:hover{background:#2d1414;filter:none}
+.btn-success{background:#0f2a1a;color:var(--success);border:1px solid #1a4a2a}
+.divider{height:1px;background:var(--border);margin:0}
+
+/* ═══════════════════════════════════════════
+   SETUP SCREEN
+═══════════════════════════════════════════ */
+#setup{align-items:center;justify-content:flex-start;padding:2.5rem 1.5rem;gap:0}
+.setup-wrap{width:100%;max-width:680px;margin:0 auto;display:flex;flex-direction:column;gap:2rem}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:.5rem}
+.brand-icon{width:40px;height:40px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem}
+.brand-name{font-size:1.4rem;font-weight:800;letter-spacing:-.03em}
+.brand-name span{color:var(--accent)}
+.setup-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.setup-section-header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.setup-section-header h2{font-size:.95rem;font-weight:700}
+.setup-section-body{padding:20px}
+
+/* question list */
+.q-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;min-height:40px}
+.q-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:12px;transition:border-color .15s}
+.q-item:hover{border-color:var(--border2)}
+.q-num{width:24px;height:24px;background:var(--border2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:var(--muted2);flex-shrink:0}
+.q-text-display{flex:1;font-size:.9rem;color:var(--text)}
+.q-delete{background:none;border:none;cursor:pointer;color:var(--muted);font-size:1.1rem;padding:2px 6px;border-radius:4px;line-height:1;transition:color .15s}
+.q-delete:hover{color:#f87171}
+.q-drag{cursor:grab;color:var(--muted);font-size:1rem;padding:2px 4px}
+
+.add-q-row{display:flex;gap:8px}
+.add-q-input{flex:1;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:11px 14px;border-radius:8px;font-size:.9rem;outline:none}
+.add-q-input:focus{border-color:var(--accent)}
+.add-q-input::placeholder{color:var(--muted)}
+
+/* session name */
+.session-name-input{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:12px 16px;border-radius:8px;font-size:1rem;outline:none}
+.session-name-input:focus{border-color:var(--accent)}
+.session-name-input::placeholder{color:var(--muted)}
+
+.launch-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.q-count-badge{font-size:.85rem;color:var(--muted2)}
+.btn-lg{padding:14px 32px;font-size:1rem;border-radius:10px}
+
+/* ═══════════════════════════════════════════
+   HOST SCREEN
+═══════════════════════════════════════════ */
+#host{flex-direction:column;overflow:hidden;height:100vh}
+
+/* top bar */
+.host-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:56px;display:flex;align-items:center;gap:16px;flex-shrink:0}
+.session-name-display{font-weight:700;font-size:.95rem;margin-right:auto}
+.q-progress{display:flex;align-items:center;gap:8px}
+.q-progress-text{font-size:.82rem;color:var(--muted2);white-space:nowrap}
+.progress-pips{display:flex;gap:4px}
+.pip{width:8px;height:8px;border-radius:50%;background:var(--border2);transition:all .25s;cursor:pointer}
+.pip.done{background:var(--accent);opacity:.55}
+.pip.active{background:var(--accent);width:22px;border-radius:4px}
+.answer-pill{background:var(--surface2);border:1px solid var(--border);padding:4px 12px;border-radius:20px;font-size:.8rem;color:var(--muted2);white-space:nowrap}
+
+/* main body */
+.host-body{display:flex;flex:1;overflow:hidden}
+
+/* sidebar */
+.host-sidebar{width:280px;min-width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.sidebar-qr{padding:20px;border-bottom:1px solid var(--border)}
+.sidebar-qr h3{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:12px}
+.qr-wrap{background:#fff;padding:10px;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.join-code{text-align:center;margin-top:8px;font-size:.75rem;color:var(--muted);word-break:break-all}
+.join-code strong{color:var(--accent);font-size:1rem;letter-spacing:.1em}
+
+.sidebar-answers{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.sidebar-answers h3{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding:16px 20px 8px;flex-shrink:0}
+.answers-scroll{flex:1;overflow-y:auto;padding:0 20px 20px}
+.word-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);gap:8px}
+.word-row:last-child{border-bottom:none}
+.word-label{font-size:.85rem;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.word-bar-wrap{width:80px;height:5px;background:var(--border2);border-radius:3px;overflow:hidden;flex-shrink:0}
+.word-bar{height:100%;background:var(--accent);border-radius:3px;transition:width .4s}
+.word-count{font-size:.75rem;color:var(--accent);font-weight:700;min-width:20px;text-align:right;flex-shrink:0}
+.no-answers{color:var(--muted);font-size:.82rem;padding:4px 0}
+
+/* cloud area */
+.cloud-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.cloud-question-banner{padding:16px 28px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0}
+.cq-label{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:4px}
+.cq-text{font-size:1.25rem;font-weight:700;line-height:1.3}
+.cloud-canvas-wrap{flex:1;position:relative;display:flex;align-items:center;justify-content:center}
+#cloud-canvas{position:absolute;top:0;left:0;width:100%;height:100%}
+.empty-cloud{text-align:center;color:var(--muted);pointer-events:none}
+.empty-cloud .icon{font-size:3rem;opacity:.25;margin-bottom:8px}
+.empty-cloud p{font-size:.9rem}
+
+/* nav footer */
+.host-footer{background:var(--surface);border-top:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:12px}
+.nav-question-info{display:flex;flex-direction:column;gap:2px}
+.nav-q-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.nav-q-text{font-size:.88rem;font-weight:600;color:var(--text);max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav-btns{display:flex;gap:8px;flex-shrink:0}
+
+/* ═══════════════════════════════════════════
+   PARTICIPANT SCREEN
+═══════════════════════════════════════════ */
+#participant{justify-content:center;align-items:center;padding:2rem 1.5rem;gap:1.5rem;min-height:100vh}
+.p-brand{font-size:1.1rem;font-weight:800;color:var(--accent);letter-spacing:-.02em}
+.p-question-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.75rem;max-width:460px;width:100%;text-align:center}
+.p-q-label{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:.6rem}
+.p-q-num{font-size:.75rem;color:var(--muted);margin-bottom:.4rem}
+.p-q-text{font-size:1.3rem;font-weight:700;line-height:1.4;color:var(--text);min-height:2rem}
+.p-waiting{color:var(--muted);font-style:italic;font-size:1rem;font-weight:400}
+.p-input-row{max-width:460px;width:100%;display:flex;gap:10px}
+.p-input{flex:1;background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:13px 16px;border-radius:10px;font-size:.95rem;outline:none}
+.p-input:focus{border-color:var(--accent)}
+.p-input::placeholder{color:var(--muted)}
+.p-input:disabled{opacity:.5}
+.p-submit{padding:13px 20px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:.95rem;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap}
+.p-submit:hover{background:#6a5ef0}
+.p-submit:disabled{background:var(--border2);color:var(--muted);cursor:not-allowed}
+.p-flash{font-size:.85rem;font-weight:500;height:1.2rem;color:var(--success)}
+.p-answers-wrap{max-width:460px;width:100%}
+.p-answers-label{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px}
+.p-tags{display:flex;flex-wrap:wrap;gap:7px}
+.p-tag{background:var(--surface2);border:1px solid var(--border2);padding:5px 12px;border-radius:20px;font-size:.82rem;color:var(--accent)}
+.p-ended{text-align:center;color:var(--muted2);font-size:1rem;padding:1rem 0}
+
+/* JOIN SCREEN */
+#join{align-items:center;justify-content:center;padding:2rem;gap:1.5rem}
+.join-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:2rem;max-width:360px;width:100%;text-align:center;display:flex;flex-direction:column;gap:1rem}
+.join-card h2{font-size:1.2rem;font-weight:700}
+.join-card p{color:var(--muted2);font-size:.9rem;line-height:1.5}
+.code-input{background:var(--bg);border:1.5px solid var(--border2);color:var(--text);padding:14px;border-radius:10px;font-size:1.5rem;font-weight:700;text-align:center;letter-spacing:.2em;outline:none;width:100%;text-transform:uppercase}
+.code-input:focus{border-color:var(--accent)}
+.join-error{color:#f87171;font-size:.85rem;min-height:1.2rem}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* MOBILE */
+@media(max-width:640px){
+  .host-sidebar{display:none}
+  .host-bar{padding:0 12px;gap:10px}
+  .host-footer{padding:12px}
+  .nav-q-text{max-width:200px}
+  .cq-text{font-size:1rem}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ SETUP ══════════════ -->
+<div id="setup" class="screen active">
+  <div class="setup-wrap">
+    <div class="brand">
+      <div class="brand-icon">☁</div>
+      <div class="brand-name">Word<span>Cloud</span> Live</div>
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-section-header">
+        <h2>Session name</h2>
+      </div>
+      <div class="setup-section-body">
+        <input class="session-name-input" id="session-name" placeholder="e.g. Team Retrospective · June 2025" maxlength="80">
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-section-header">
+        <h2>Questions</h2>
+        <span id="q-count-label" style="font-size:.8rem;color:var(--muted)">0 questions</span>
+      </div>
+      <div class="setup-section-body">
+        <div class="q-list" id="q-list">
+          <p style="color:var(--muted);font-size:.85rem" id="q-empty-hint">Add your first question below ↓</p>
+        </div>
+        <div class="add-q-row">
+          <input class="add-q-input" id="new-q-input" placeholder="Type a question and press Enter…" maxlength="160"
+            onkeydown="if(event.key==='Enter')addQuestion()">
+          <button class="btn btn-primary" onclick="addQuestion()">+ Add</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="launch-row">
+      <p class="q-count-badge" id="launch-hint" style="color:var(--muted)">Add at least one question to launch</p>
+      <button class="btn btn-primary btn-lg" id="launch-btn" onclick="launchSession()" disabled>Launch session →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ HOST ══════════════ -->
+<div id="host" class="screen">
+  <div class="host-bar">
+    <div class="session-name-display" id="host-session-name"></div>
+    <div class="q-progress">
+      <span class="q-progress-text" id="q-progress-text"></span>
+      <div class="progress-pips" id="progress-pips"></div>
+    </div>
+    <div class="answer-pill" id="answer-pill">0 answers</div>
+  </div>
+
+  <div class="host-body">
+    <!-- sidebar -->
+    <div class="host-sidebar">
+      <div class="sidebar-qr">
+        <h3>Scan to join</h3>
+        <img id="qr-img" src="" alt="QR Code"
+          style="width:160px;height:160px;border-radius:8px;display:block;margin:0 auto 10px">
+        <div style="text-align:center;margin-bottom:6px;font-size:.68rem;color:var(--muted)">or type the code</div>
+        <div id="code-display"
+          style="text-align:center;font-size:2rem;font-weight:900;letter-spacing:.18em;color:var(--accent);background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px 0;margin-bottom:6px"></div>
+        <div id="join-url-text"
+          style="font-size:.6rem;color:var(--muted);word-break:break-all;text-align:center;line-height:1.4"></div>
+      </div>
+      <div class="sidebar-answers">
+        <h3>Live answers</h3>
+        <div class="answers-scroll" id="answers-scroll">
+          <p class="no-answers">Waiting…</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- cloud -->
+    <div class="cloud-main">
+      <div class="cloud-question-banner">
+        <div class="cq-label">Current question</div>
+        <div class="cq-text" id="cq-text">—</div>
+      </div>
+      <div class="cloud-canvas-wrap" id="cloud-canvas-wrap">
+        <div class="empty-cloud" id="empty-cloud">
+          <div class="icon">💬</div>
+          <p>Answers will appear here</p>
+        </div>
+        <canvas id="cloud-canvas" style="display:none"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="host-footer">
+    <div class="nav-question-info">
+      <div class="nav-q-label" id="footer-q-label"></div>
+      <div class="nav-q-text" id="footer-q-text"></div>
+    </div>
+    <div class="nav-btns">
+      <button class="btn btn-ghost" id="prev-btn" onclick="goQuestion(-1)">← Prev</button>
+      <button class="btn btn-danger" onclick="clearCurrentAnswers()">Clear answers</button>
+      <button class="btn btn-primary" id="next-btn" onclick="goQuestion(1)">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ JOIN ══════════════ -->
+<div id="join" class="screen">
+  <div class="p-brand">☁ WordCloud Live</div>
+  <div class="join-card">
+    <h2>Join a session</h2>
+    <p>Enter the 5-letter code shown on the host's screen</p>
+    <input class="code-input" id="code-input" maxlength="5" placeholder="XXXXX"
+      oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+      onkeydown="if(event.key==='Enter')doJoin()">
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doJoin()">Join session →</button>
+    <div class="join-error" id="join-error"></div>
+    <button class="btn btn-ghost" style="font-size:.8rem" onclick="show('setup')">← Back</button>
+  </div>
+</div>
+
+<!-- ══════════════ PARTICIPANT ══════════════ -->
+<div id="participant" class="screen">
+  <div class="p-brand">☁ WordCloud Live</div>
+
+  <div class="p-question-card" id="p-q-card">
+    <div class="p-q-label">Question</div>
+    <div class="p-q-num" id="p-q-num"></div>
+    <div class="p-q-text" id="p-q-text"><span class="p-waiting">Waiting for the host…</span></div>
+  </div>
+
+  <div class="p-input-row">
+    <input class="p-input" id="p-input" placeholder="Type your answer…" maxlength="80"
+      onkeydown="if(event.key==='Enter')submitAnswer()">
+    <button class="p-submit" id="p-submit-btn" onclick="submitAnswer()">Send</button>
+  </div>
+  <div class="p-flash" id="p-flash"></div>
+
+  <div class="p-answers-wrap" id="p-answers-wrap" style="display:none">
+    <div class="p-answers-label">Your answers this question</div>
+    <div class="p-tags" id="p-tags"></div>
+  </div>
+
+  <div class="p-ended" id="p-ended" style="display:none">🎉 Session ended. Thanks for participating!</div>
+</div>
+
+<script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STATE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let questions = [];          // setup
+let sessionCode = '';
+let currentQ = 0;
+let isHost = false;
+let myAnswersThisQ = [];
+let pollTimer = null;
+let lastRenderHash = '';
+
+const POLL_MS = 2000;
+const COLORS = ['#7b68ee','#e879a0','#4ade80','#facc15','#38bdf8','#fb923c','#a78bfa','#34d399','#f472b6','#60a5fa'];
+const PREFIX = 'wcl_';
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STORAGE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const store = {
+  get(k){ try{return JSON.parse(localStorage.getItem(PREFIX+k))}catch{return null} },
+  set(k,v){ try{localStorage.setItem(PREFIX+k,JSON.stringify(v))}catch{} },
+};
+
+function getSession(){ return store.get(sessionCode) }
+function setSession(s){ store.set(sessionCode, s) }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SCREENS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SETUP
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function addQuestion(){
+  const input = document.getElementById('new-q-input');
+  const val = input.value.trim();
+  if(!val) return;
+  questions.push({ text: val, answers: {} });
+  input.value = '';
+  renderQList();
+  input.focus();
+}
+
+function removeQuestion(i){
+  questions.splice(i,1);
+  renderQList();
+}
+
+function renderQList(){
+  const list = document.getElementById('q-list');
+  const hint = document.getElementById('q-empty-hint');
+  const label = document.getElementById('q-count-label');
+  const launchBtn = document.getElementById('launch-btn');
+  const launchHint = document.getElementById('launch-hint');
+
+  label.textContent = `${questions.length} question${questions.length!==1?'s':''}`;
+
+  if(!questions.length){
+    list.innerHTML='';
+    list.appendChild(Object.assign(document.createElement('p'),{
+      textContent:'Add your first question below ↓',
+      style:'color:var(--muted);font-size:.85rem'
+    }));
+    launchBtn.disabled = true;
+    launchHint.textContent = 'Add at least one question to launch';
+    return;
+  }
+
+  list.innerHTML = questions.map((q,i)=>`
+    <div class="q-item">
+      <div class="q-num">${i+1}</div>
+      <div class="q-text-display">${escHtml(q.text)}</div>
+      <button class="q-delete" onclick="removeQuestion(${i})" title="Remove">×</button>
+    </div>
+  `).join('');
+
+  launchBtn.disabled = false;
+  launchHint.textContent = `${questions.length} question${questions.length!==1?'s':''} · ready to launch`;
+  launchHint.style.color = 'var(--success)';
+}
+
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+function launchSession(){
+  const name = document.getElementById('session-name').value.trim() || 'Live Session';
+  if(!questions.length) return;
+  sessionCode = genCode();
+  isHost = true;
+  currentQ = 0;
+
+  const session = {
+    name,
+    questions: questions.map(q=>({ text:q.text, answers:{} })),
+    current: 0,
+    ended: false,
+    created: Date.now()
+  };
+  setSession(session);
+
+  show('host');
+  initHost(session);
+  startPolling();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// HOST
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function initHost(session){
+  document.getElementById('host-session-name').textContent = session.name;
+  document.getElementById('code-display').textContent = sessionCode;
+
+  const joinUrl = buildJoinUrl(sessionCode);
+  document.getElementById('join-url-text').textContent = joinUrl;
+
+  // Google Charts QR — works anywhere the page is served over HTTP/HTTPS
+  const qrData = encodeURIComponent(joinUrl);
+  const qrSrc = `https://chart.googleapis.com/chart?cht=qr&chs=320x320&chl=${qrData}&choe=UTF-8&chld=M|2`;
+  document.getElementById('qr-img').src = qrSrc;
+
+  renderHostQ(session);
+}
+
+function buildJoinUrl(code){
+  const base = location.href.split('?')[0];
+  return `${base}?join=${code}`;
+}
+
+function renderHostQ(session){
+  const q = session.questions[session.current];
+  const total = session.questions.length;
+  const idx = session.current;
+
+  document.getElementById('cq-text').textContent = q.text;
+  document.getElementById('q-progress-text').textContent = `${idx+1} / ${total}`;
+  document.getElementById('footer-q-label').textContent = `Question ${idx+1} of ${total}`;
+  document.getElementById('footer-q-text').textContent = q.text;
+
+  // pips
+  const pips = document.getElementById('progress-pips');
+  pips.innerHTML = session.questions.map((_,i)=>
+    `<div class="pip ${i<idx?'done':i===idx?'active':''}" onclick="jumpToQ(${i})" title="Q${i+1}"></div>`
+  ).join('');
+
+  // nav buttons
+  document.getElementById('prev-btn').disabled = idx===0;
+  document.getElementById('next-btn').textContent = idx===total-1 ? 'End session ✓' : 'Next →';
+
+  renderCloud(q.answers);
+  renderSidebarAnswers(q.answers);
+}
+
+function jumpToQ(i){
+  const session = getSession();
+  if(!session) return;
+  session.current = i;
+  setSession(session);
+  currentQ = i;
+  renderHostQ(session);
+}
+
+function goQuestion(dir){
+  const session = getSession();
+  if(!session) return;
+  const total = session.questions.length;
+  const next = session.current + dir;
+  if(next < 0) return;
+  if(next >= total){
+    if(!confirm('End the session?')) return;
+    session.ended = true;
+    setSession(session);
+    alert('Session ended. Participants will see a thank-you message.');
+    return;
+  }
+  session.current = next;
+  setSession(session);
+  currentQ = next;
+  renderHostQ(session);
+}
+
+function clearCurrentAnswers(){
+  if(!confirm('Clear answers for this question?')) return;
+  const session = getSession();
+  if(!session) return;
+  session.questions[session.current].answers = {};
+  setSession(session);
+  renderCloud({});
+  renderSidebarAnswers({});
+  lastRenderHash = '';
+}
+
+function renderSidebarAnswers(answers){
+  const scroll = document.getElementById('answers-scroll');
+  const words = Object.entries(answers).sort((a,b)=>b[1]-a[1]);
+  const total = words.reduce((s,[,c])=>s+c,0);
+  document.getElementById('answer-pill').textContent = `${total} answer${total!==1?'s':''}`;
+
+  if(!words.length){
+    scroll.innerHTML = '<p class="no-answers">Waiting for answers…</p>';
+    return;
+  }
+  const max = words[0][1];
+  scroll.innerHTML = words.map(([w,c])=>`
+    <div class="word-row">
+      <span class="word-label">${escHtml(w)}</span>
+      <div class="word-bar-wrap"><div class="word-bar" style="width:${Math.round(c/max*100)}%"></div></div>
+      <span class="word-count">${c}</span>
+    </div>
+  `).join('');
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// POLLING
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function startPolling(){
+  if(pollTimer) clearInterval(pollTimer);
+  poll();
+  pollTimer = setInterval(poll, POLL_MS);
+}
+
+function poll(){
+  const session = getSession();
+  if(!session) return;
+
+  if(isHost){
+    const q = session.questions[session.current];
+    const hash = session.current + '|' + JSON.stringify(q.answers);
+    if(hash !== lastRenderHash){
+      lastRenderHash = hash;
+      renderCloud(q.answers);
+      renderSidebarAnswers(q.answers);
+    }
+  } else {
+    // participant
+    if(session.ended){
+      document.getElementById('p-ended').style.display='block';
+      document.getElementById('p-input').disabled = true;
+      document.getElementById('p-submit-btn').disabled = true;
+      return;
+    }
+    const q = session.questions[session.current];
+    const num = session.current;
+    const prevNum = parseInt(document.getElementById('p-q-num').dataset.q||'-1');
+
+    document.getElementById('p-q-text').textContent = q.text;
+    document.getElementById('p-q-num').textContent = `Question ${num+1} of ${session.questions.length}`;
+    document.getElementById('p-q-num').dataset.q = num;
+
+    // reset when question changes
+    if(prevNum !== num && prevNum !== -1){
+      myAnswersThisQ = [];
+      document.getElementById('p-tags').innerHTML = '';
+      document.getElementById('p-answers-wrap').style.display = 'none';
+    }
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// PARTICIPANT
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function showJoinScreen(){
+  show('join');
+  setTimeout(()=>document.getElementById('code-input').focus(), 100);
+}
+
+function doJoin(){
+  const code = document.getElementById('code-input').value.trim().toUpperCase();
+  const err = document.getElementById('join-error');
+  if(code.length < 4){ err.textContent='Enter the full code'; return; }
+  const session = store.get(code);
+  if(!session){ err.textContent='Session not found. Check the code and try again.'; return; }
+  if(session.ended){ err.textContent='This session has already ended.'; return; }
+  err.textContent = '';
+  sessionCode = code;
+  isHost = false;
+  show('participant');
+  startPolling();
+}
+
+function submitAnswer(){
+  const input = document.getElementById('p-input');
+  const val = input.value.trim();
+  if(!val) return;
+
+  const session = getSession();
+  if(!session || session.ended) return;
+
+  const words = val.toLowerCase().split(/\s+/).filter(w=>w.length>1 && /[a-z]/.test(w));
+  if(!words.length){ input.value=''; return; }
+
+  words.forEach(w=>{
+    session.questions[session.current].answers[w] =
+      (session.questions[session.current].answers[w]||0)+1;
+  });
+  setSession(session);
+
+  myAnswersThisQ.push(val);
+  input.value='';
+
+  // flash
+  const flash = document.getElementById('p-flash');
+  flash.textContent = '✓ Submitted!';
+  setTimeout(()=>flash.textContent='', 2000);
+
+  // tags
+  document.getElementById('p-tags').innerHTML =
+    myAnswersThisQ.map(a=>`<span class="p-tag">${escHtml(a)}</span>`).join('');
+  document.getElementById('p-answers-wrap').style.display='block';
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// WORD CLOUD
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function renderCloud(answers){
+  const canvas = document.getElementById('cloud-canvas');
+  const empty = document.getElementById('empty-cloud');
+  const words = Object.entries(answers).sort((a,b)=>b[1]-a[1]);
+
+  if(!words.length){
+    canvas.style.display='none';
+    empty.style.display='block';
+    return;
+  }
+  empty.style.display='none';
+  canvas.style.display='block';
+
+  const wrap = document.getElementById('cloud-canvas-wrap');
+  canvas.width = wrap.offsetWidth || 800;
+  canvas.height = wrap.offsetHeight || 500;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const maxC = words[0][1];
+  const minSz = 16, maxSz = Math.min(canvas.width/5, 90);
+  const placed = [];
+
+  for(const [word,count] of words){
+    const size = Math.round(minSz + (count/maxC)*(maxSz-minSz));
+    const weight = count === maxC ? 800 : count >= maxC*.6 ? 700 : 600;
+    ctx.font = `${weight} ${size}px 'Inter',system-ui,sans-serif`;
+    const tw = ctx.measureText(word).width;
+    const th = size;
+    const color = COLORS[Math.abs(hash(word)) % COLORS.length];
+    const pos = spiral(canvas.width, canvas.height, tw, th, placed, 300);
+    if(!pos) continue;
+    placed.push({x:pos.x, y:pos.y, w:tw, h:th});
+    ctx.fillStyle = color;
+    ctx.globalAlpha = .82 + Math.random()*.18;
+    ctx.fillText(word, pos.x, pos.y);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function spiral(cw,ch,tw,th,placed,tries){
+  const cx=cw/2, cy=ch/2;
+  for(let i=0;i<tries;i++){
+    const angle = i*2.3999;
+    const r = 2.8*(i**.54);
+    const x = cx + r*Math.cos(angle) - tw/2;
+    const y = cy + r*Math.sin(angle) + th/3;
+    if(x<4||y<th+2||x+tw>cw-4||y>ch-4) continue;
+    if(!placed.some(p=>overlaps(x,y-th,tw,th,p.x,p.y-p.h,p.w,p.h,5))) return {x,y};
+  }
+  return null;
+}
+
+function overlaps(ax,ay,aw,ah,bx,by,bw,bh,pad){
+  return ax<bx+bw+pad && ax+aw+pad>bx && ay<by+bh+pad && ay+ah+pad>by;
+}
+
+function hash(s){ let h=0; for(const c of s) h=Math.imul(31,h)+c.charCodeAt(0)|0; return h; }
+function genCode(){ return Math.random().toString(36).slice(2,7).toUpperCase() }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// INIT
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+(function init(){
+  const p = new URLSearchParams(location.search);
+  const code = p.get('join');
+  if(code){
+    document.getElementById('code-input').value = code.toUpperCase();
+    doJoin();
+    return;
+  }
+  show('setup');
+})();
+
+window.addEventListener('resize', ()=>{
+  if(isHost){
+    const s = getSession();
+    if(s) renderCloud(s.questions[s.current].answers);
+  }
+});
+</script>
+</body>
+</html>
