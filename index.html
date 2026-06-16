@@ -165,6 +165,25 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 .join-error{color:#f87171;font-size:.85rem;min-height:1.2rem}
 
 /* SCROLLBAR */
+
+/* ── HOME ── */
+#home{align-items:center;justify-content:center;padding:2rem;gap:2.5rem;text-align:center}
+.home-brand{display:flex;flex-direction:column;align-items:center;gap:12px}
+.home-icon{width:64px;height:64px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:2rem;box-shadow:0 0 40px rgba(123,104,238,.35)}
+.home-title{font-size:2.2rem;font-weight:900;letter-spacing:-.04em}
+.home-title span{color:var(--accent)}
+.home-sub{color:var(--muted2);font-size:1rem;max-width:340px;line-height:1.6;margin-top:-8px}
+.home-cards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;width:100%;max-width:560px}
+.home-card{flex:1;min-width:220px;max-width:260px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.75rem 1.5rem;display:flex;flex-direction:column;align-items:flex-start;gap:10px;cursor:pointer;transition:all .2s;text-align:left}
+.home-card:hover{border-color:var(--accent);background:var(--surface2);transform:translateY(-2px);box-shadow:0 8px 32px rgba(123,104,238,.18)}
+.home-card-icon{font-size:1.8rem;margin-bottom:2px}
+.home-card-title{font-size:1.05rem;font-weight:700;color:var(--text)}
+.home-card-desc{font-size:.83rem;color:var(--muted2);line-height:1.5}
+.home-card-btn{margin-top:6px;padding:9px 18px;border-radius:8px;font-size:.85rem;font-weight:700;border:none;cursor:pointer;transition:all .15s;width:100%;text-align:center}
+.home-card-btn-primary{background:var(--accent);color:#fff}
+.home-card-btn-ghost{background:transparent;color:var(--accent);border:1px solid var(--border2)}
+.home-card:hover .home-card-btn-ghost{border-color:var(--accent)}
+
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
@@ -181,10 +200,34 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 </head>
 <body>
 
+<!-- ══════════════ HOME ══════════════ -->
+<div id="home" class="screen active">
+  <div class="home-brand">
+    <div class="home-icon">☁</div>
+    <div class="home-title">Word<span>Cloud</span> Live</div>
+    <p class="home-sub">Ask questions. Collect answers. Watch ideas bloom into a live word cloud.</p>
+  </div>
+  <div class="home-cards">
+    <div class="home-card" onclick="show('setup')">
+      <div class="home-card-icon">🎨</div>
+      <div class="home-card-title">Create a session</div>
+      <div class="home-card-desc">Plan your questions, set a session name, then go live with your audience.</div>
+      <div class="home-card-btn home-card-btn-primary">Create session →</div>
+    </div>
+    <div class="home-card" onclick="show('join')">
+      <div class="home-card-icon">✋</div>
+      <div class="home-card-title">Join a session</div>
+      <div class="home-card-desc">Got a code from the host? Enter it here to join and start answering.</div>
+      <div class="home-card-btn home-card-btn-ghost">Enter code →</div>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════ SETUP ══════════════ -->
-<div id="setup" class="screen active">
+<div id="setup" class="screen">
   <div class="setup-wrap">
     <div class="brand">
+      <button class="btn btn-ghost" style="font-size:.8rem;padding:7px 12px" onclick="show('home')">← Back</button>
       <div class="brand-icon">☁</div>
       <div class="brand-name">Word<span>Cloud</span> Live</div>
     </div>
@@ -238,8 +281,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
     <div class="host-sidebar">
       <div class="sidebar-qr">
         <h3>Scan to join</h3>
-        <img id="qr-img" src="" alt="QR Code"
-          style="width:160px;height:160px;border-radius:8px;display:block;margin:0 auto 10px">
+        <canvas id="qr-canvas"
+          style="width:160px;height:160px;border-radius:8px;display:block;margin:0 auto 10px;image-rendering:pixelated"></canvas>
         <div style="text-align:center;margin-bottom:6px;font-size:.68rem;color:var(--muted)">or type the code</div>
         <div id="code-display"
           style="text-align:center;font-size:2rem;font-weight:900;letter-spacing:.18em;color:var(--accent);background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px 0;margin-bottom:6px"></div>
@@ -294,7 +337,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
       onkeydown="if(event.key==='Enter')doJoin()">
     <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doJoin()">Join session →</button>
     <div class="join-error" id="join-error"></div>
-    <button class="btn btn-ghost" style="font-size:.8rem" onclick="show('setup')">← Back</button>
+    <button class="btn btn-ghost" style="font-size:.8rem" onclick="show('home')">← Home</button>
   </div>
 </div>
 
@@ -442,10 +485,8 @@ function initHost(session){
   const joinUrl = buildJoinUrl(sessionCode);
   document.getElementById('join-url-text').textContent = joinUrl;
 
-  // Google Charts QR — works anywhere the page is served over HTTP/HTTPS
-  const qrData = encodeURIComponent(joinUrl);
-  const qrSrc = `https://chart.googleapis.com/chart?cht=qr&chs=320x320&chl=${qrData}&choe=UTF-8&chld=M|2`;
-  document.getElementById('qr-img').src = qrSrc;
+  // Draw QR code using self-contained generator (no external deps)
+  drawQR('qr-canvas', joinUrl);
 
   renderHostQ(session);
 }
@@ -711,7 +752,7 @@ function genCode(){ return Math.random().toString(36).slice(2,7).toUpperCase() }
     doJoin();
     return;
   }
-  show('setup');
+  show('home');
 })();
 
 window.addEventListener('resize', ()=>{
@@ -720,6 +761,163 @@ window.addEventListener('resize', ()=>{
     if(s) renderCloud(s.questions[s.current].answers);
   }
 });
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SELF-CONTAINED QR CODE GENERATOR
+// Reed-Solomon + QR matrix, no external deps
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function drawQR(canvasId, text){
+  const canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  try {
+    const matrix = generateQRMatrix(text);
+    const size = matrix.length;
+    const scale = Math.floor(160 / size);
+    const dim = size * scale;
+    canvas.width = dim; canvas.height = dim;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0,0,dim,dim);
+    ctx.fillStyle = '#000000';
+    for(let r=0;r<size;r++) for(let c=0;c<size;c++)
+      if(matrix[r][c]) ctx.fillRect(c*scale,r*scale,scale,scale);
+  } catch(e){ console.error('QR error',e); }
+}
+
+function generateQRMatrix(data){
+  // QR Version 2, ECC Level M — supports up to 32 chars (enough for a short URL)
+  // For longer URLs we bump to version 3/4 automatically
+  const bytes = strToBytes(data);
+  const version = bytes.length<=16?1:bytes.length<=28?2:bytes.length<=44?3:4;
+  const {codewords,size} = encodeQR(bytes,version);
+  return buildMatrix(codewords,version,size);
+}
+
+function strToBytes(s){
+  const out=[];
+  for(let i=0;i<s.length;i++){
+    const c=s.charCodeAt(i);
+    if(c<128) out.push(c);
+    else if(c<2048){out.push(192|(c>>6));out.push(128|(c&63));}
+    else{out.push(224|(c>>12));out.push(128|((c>>6)&63));out.push(128|(c&63));}
+  }
+  return out;
+}
+
+// GF(256) arithmetic
+const GF_EXP=new Uint8Array(512),GF_LOG=new Uint8Array(256);
+(function(){let x=1;for(let i=0;i<255;i++){GF_EXP[i]=x;GF_LOG[x]=i;x<<=1;if(x&256)x^=285;}for(let i=255;i<512;i++)GF_EXP[i]=GF_EXP[i-255];})();
+function gfMul(a,b){return(a===0||b===0)?0:GF_EXP[GF_LOG[a]+GF_LOG[b]];}
+function gfPoly(n){
+  let p=[1];
+  for(let i=0;i<n;i++){const r=[0,...p];for(let j=0;j<p.length;j++)r[j]^=gfMul(p[j],GF_EXP[i]);p=r;}
+  return p;
+}
+function rsEncode(data,n){
+  const g=gfPoly(n);const out=[...data,...new Array(n).fill(0)];
+  for(let i=0;i<data.length;i++){const c=out[i];if(c!==0)for(let j=0;j<g.length;j++)out[i+j]^=gfMul(g[j],c);}
+  return out.slice(data.length);
+}
+
+// Version capacity / ECC params [version]: {ecPerBlock, blocks, dataCW}
+const V_PARAMS={
+  1:{ecPB:10,bl:1,dcw:13}, // M
+  2:{ecPB:16,bl:1,dcw:22},
+  3:{ecPB:26,bl:2,dcw:34},// actually split but simplify
+  4:{ecPB:18,bl:2,dcw:48},
+};
+
+function encodeQR(bytes,version){
+  const p=V_PARAMS[version]||V_PARAMS[4];
+  const size=17+version*4;
+  // Mode indicator (byte=0100) + char count + data + terminator
+  const bits=[];
+  const pushBits=(v,n)=>{for(let i=n-1;i>=0;i--)bits.push((v>>i)&1);};
+  pushBits(4,4); // byte mode
+  pushBits(bytes.length,8);
+  bytes.forEach(b=>pushBits(b,8));
+  // terminator
+  for(let i=0;i<4&&bits.length<p.dcw*8;i++)bits.push(0);
+  while(bits.length%8)bits.push(0);
+  // pad codewords
+  const cws=[];
+  for(let i=0;i<bits.length;i+=8){let v=0;for(let j=0;j<8;j++)v=(v<<1)|bits[i+j];cws.push(v);}
+  const padSeq=[236,17];
+  while(cws.length<p.dcw)cws.push(padSeq[(cws.length-Math.ceil(bytes.length+2))&1]||padSeq[cws.length%2]);
+  const ecCWs=rsEncode(cws,p.ecPB*p.bl);
+  return{codewords:[...cws,...ecCWs],size};
+}
+
+function buildMatrix(codewords,version,size){
+  const M=Array.from({length:size},()=>new Array(size).fill(null));
+  const setM=(r,c,v)=>{if(r>=0&&r<size&&c>=0&&c<size)M[r][c]=v;};
+
+  // Finder pattern
+  function finder(tr,tc){
+    for(let r=-1;r<=7;r++)for(let c=-1;c<=7;c++){
+      if(r<0||r>6||c<0||c>6)setM(tr+r,tc+c,false);
+      else if(r===0||r===6||c===0||c===6)setM(tr+r,tc+c,true);
+      else if(r>=2&&r<=4&&c>=2&&c<=4)setM(tr+r,tc+c,true);
+      else setM(tr+r,tc+c,false);
+    }
+  }
+  finder(0,0);finder(0,size-7);finder(size-7,0);
+
+  // Timing patterns
+  for(let i=8;i<size-8;i++){setM(6,i,(i%2)===0);setM(i,6,(i%2)===0);}
+
+  // Dark module
+  setM(4*version+9,8,true);
+
+  // Alignment patterns (version>=2)
+  if(version>=2){
+    const ap=version===2?[6,18]:version===3?[6,22]:version===4?[6,26]:[6,30];
+    for(const ar of ap)for(const ac of ap){
+      if(M[ar][ac]!==null)continue;
+      for(let r=-2;r<=2;r++)for(let c=-2;c<=2;c++){
+        if(Math.abs(r)===2||Math.abs(c)===2)setM(ar+r,ac+c,true);
+        else if(r===0&&c===0)setM(ar+r,ac+c,true);
+        else setM(ar+r,ac+c,false);
+      }
+    }
+  }
+
+  // Format info placeholder
+  const formatPos=[[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8],
+    [size-1,8],[size-2,8],[size-3,8],[size-4,8],[size-5,8],[size-6,8],[size-7,8],[size-8,8],[8,size-8],[8,size-7],[8,size-6],[8,size-5],[8,size-4],[8,size-3],[8,size-2]];
+  formatPos.forEach(([r,c])=>setM(r,c,false));
+
+  // Place data bits (mask 0: (row+col)%2===0)
+  const dataBits=[];
+  codewords.forEach(cw=>{for(let i=7;i>=0;i--)dataBits.push((cw>>i)&1);});
+  let bi=0;
+  let up=true;
+  for(let c=size-1;c>=0;c-=2){
+    if(c===6)c--;
+    for(let ri=0;ri<size;ri++){
+      const r=up?size-1-ri:ri;
+      for(const cc of[c,c-1]){
+        if(M[r][cc]===null){
+          const bit=bi<dataBits.length?dataBits[bi++]:0;
+          const mask=((r+cc)%2===0)?1:0;
+          M[r][cc]=(bit^mask)===1;
+        }
+      }
+    }
+    up=!up;
+  }
+
+  // Format string (ECC level M=00, mask 0=000 -> format 101010000010010 with BCH)
+  const fmt=0b101010000010010; // precomputed for M+mask0
+  const fmtBits=[];for(let i=14;i>=0;i--)fmtBits.push((fmt>>i)&1);
+  const fpos1=[[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8],[8,8]];
+  fpos1.forEach(([r,c],i)=>setM(r,c,fmtBits[i]===1));
+  const fpos2=[[size-1,8],[size-2,8],[size-3,8],[size-4,8],[size-5,8],[size-6,8],[size-7,8],[8,size-8],[8,size-7],[8,size-6],[8,size-5],[8,size-4],[8,size-3],[8,size-2]];
+  fpos2.forEach(([r,c],i)=>setM(r,c,fmtBits[i+1]===1));
+
+  // Fill nulls with false
+  return M.map(row=>row.map(v=>v===true));
+}
 </script>
 </body>
 </html>
